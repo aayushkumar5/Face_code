@@ -60,15 +60,27 @@ class AdaptiveEngine:
         solved_ids = [p.id for p in self.problems_solved]
         unsolved = [p for p in available if p.id not in solved_ids]
         
-        # If all solved at this level, move to next
+        # If all solved at this level, try the next level (with cycle guard)
         if not unsolved:
-            if target_difficulty == DifficultyLevel.EASY:
-                return self.select_problem(DifficultyLevel.MEDIUM)
-            elif target_difficulty == DifficultyLevel.MEDIUM:
-                return self.select_problem(DifficultyLevel.HARD)
-            else:
-                # Loop back to easy
-                return self.select_problem(DifficultyLevel.EASY)
+            order = [DifficultyLevel.EASY, DifficultyLevel.MEDIUM, DifficultyLevel.HARD]
+            start_idx = order.index(target_difficulty)
+            for offset in range(1, len(order)):
+                next_diff = order[(start_idx + offset) % len(order)]
+                alt = self.problem_bank.get_problems_by_difficulty(next_diff)
+                alt_unsolved = [p for p in alt if p.id not in solved_ids]
+                if alt_unsolved:
+                    problem = random.choice(alt_unsolved)
+                    self.current_problem = problem
+                    self.hints_provided = []
+                    self.next_hint_index = 0
+                    return problem
+            # All problems at all levels solved — pick any random problem
+            all_problems = list(self.problem_bank.problems.values())
+            problem = random.choice(all_problems)
+            self.current_problem = problem
+            self.hints_provided = []
+            self.next_hint_index = 0
+            return problem
         
         # Select random unsolved problem
         problem = random.choice(unsolved)

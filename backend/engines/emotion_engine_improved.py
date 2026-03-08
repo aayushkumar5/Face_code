@@ -162,7 +162,7 @@ class EmotionEngine:
 
         else:  # dummy
             import random
-            dominant = random.choice(["neutral", "happy", "confused", "sad"])
+            dominant = random.choice(["neutral", "happy", "sad", "surprise"])
             result = {
                 "dominant_emotion": dominant,
                 "emotion": {e: round(random.random() * 100, 1) for e in EMOTION_LABELS}
