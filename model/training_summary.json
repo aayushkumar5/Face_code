@@ -1,0 +1,49 @@
+{
+  "model_path": "models/emotion_cnn.keras",
+  "epochs_trained": 65,
+  "best_val_accuracy": 0.5883254408836365,
+  "final_val_accuracy": 0.5809417963027954,
+  "final_train_accuracy": 0.5936117768287659,
+  "per_class_accuracy": {
+    "angry": 0.5292275574112735,
+    "disgust": 0.7747747747747747,
+    "fear": 0.294921875,
+    "happy": 0.7795941375422774,
+    "sad": 0.37530072173215717,
+    "surprise": 0.7809867629362214,
+    "neutral": 0.6715328467153284
+  },
+  "total_params": 1244135,
+  "emotion_labels": [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "sad",
+    "surprise",
+    "neutral"
+  ],
+  "training_config": {
+    "epochs": 80,
+    "batch_size": 64,
+    "optimizer": "Adam",
+    "initial_lr": 0.001,
+    "class_weights": {
+      "0": 1.0266046844269623,
+      "1": 9.406618610747051,
+      "2": 1.0010460615781582,
+      "3": 0.5684387684387684,
+      "4": 0.8491274770777877,
+      "5": 1.293372978330405,
+      "6": 0.8260394187886635
+    },
+    "augmentation": [
+      "RandomFlip",
+      "RandomRotation",
+      "RandomZoom",
+      "RandomTranslation",
+      "RandomContrast"
+    ],
+    "preprocessing": "CLAHE + normalise 0-1"
+  }
+}

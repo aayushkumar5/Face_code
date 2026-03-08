@@ -1,0 +1,17 @@
+facecode-1.0/
+.ipynb_checkpoints/
+__pycache__/
+.data/
+Quiries.txt
+*.pyc
+node_modules/
+Frontend/node_modules/
+.env
+*.db
+.idea/
+test
+train
+fer2013.csv
+test.mp4
+train.mp4
+sample_images.png
