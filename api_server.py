@@ -16,14 +16,16 @@ import cv2
 import numpy as np
 import json
 
-# Add backend to path
+# Add backend/engines to path so engine modules resolve correctly
 backend_path = Path(__file__).parent / 'backend'
+engines_path = backend_path / 'engines'
+sys.path.insert(0, str(engines_path))
 sys.path.insert(0, str(backend_path))
 
-from backend.emotion_engine_improved import EmotionEngine, BehaviorTracker, ConfidenceCalculator
-from backend.adaptive_engine import AdaptiveEngine
-from backend.code_executor import CodeExecutor
-from backend.problem_bank import ProblemBank, DifficultyLevel
+from emotion_engine_improved import EmotionEngine, BehaviorTracker, ConfidenceCalculator
+from adaptive_engine import AdaptiveEngine
+from code_executor import CodeExecutor
+from problem_bank import ProblemBank, DifficultyLevel
 from database import FaceCodeDatabase
 
 # Initialize FastAPI app

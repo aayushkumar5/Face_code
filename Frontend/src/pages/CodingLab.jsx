@@ -38,10 +38,11 @@ function CodeEditor({ value, onChange }) {
 
 // ── Confidence Ring ────────────────────────────────────────────────────────
 function ConfidenceRing({ value }) {
+  const v = Number.isFinite(value) ? value : 0;
   const r = 44;
   const circ = 2 * Math.PI * r;
-  const dash = circ * value;
-  const color = value >= 0.7 ? "#00e5a0" : value >= 0.4 ? "#f5c542" : "#ff5c5c";
+  const dash = circ * v;
+  const color = v >= 0.7 ? "#00e5a0" : v >= 0.4 ? "#f5c542" : "#ff5c5c";
 
   return (
     <div className="conf-ring-wrap">
@@ -57,7 +58,7 @@ function ConfidenceRing({ value }) {
         />
       </svg>
       <div className="conf-ring-label">
-        <span className="conf-pct" style={{ color }}>{Math.round(value * 100)}%</span>
+        <span className="conf-pct" style={{ color }}>{Math.round(v * 100)}%</span>
         <span className="conf-text">confidence</span>
       </div>
     </div>
@@ -240,7 +241,7 @@ export default function CodingLab({ sessionId, onGoAnalytics }) {
         const result = await API.analyzeEmotion(b64, sessionId);
         if (result.face_detected) {
           setEmotion(result.emotion);
-          setConfidence(result.confidence);
+          setConfidence(result.overall_confidence ?? result.confidence ?? 0.5);
           setFaceDetected(true);
         } else {
           setFaceDetected(false);

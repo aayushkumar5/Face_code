@@ -1,9 +1,10 @@
 /**
  * FaceCode API helper
- * All calls to FastAPI backend (http://localhost:8000)
+ * All calls go through the Vite dev proxy (same origin)
+ * so they work without CORS issues and match the WebSocket path.
  */
 
-const BASE = "http://localhost:8000";
+const BASE = "";
 
 async function req(path, method = "GET", body = null) {
   const opts = {
