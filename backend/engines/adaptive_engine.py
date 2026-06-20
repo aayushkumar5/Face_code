@@ -5,7 +5,10 @@ Smart difficulty adjustment and progressive hint system
 
 import time
 from typing import Optional, Dict, List
-from problem_bank import Problem, DifficultyLevel, HintLevel, ProblemBank
+try:
+    from .problem_bank import Problem, DifficultyLevel, HintLevel, ProblemBank
+except ImportError:  # Direct script execution
+    from problem_bank import Problem, DifficultyLevel, HintLevel, ProblemBank
 import random
 
 class AdaptiveEngine:

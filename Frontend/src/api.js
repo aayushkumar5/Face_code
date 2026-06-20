@@ -5,22 +5,31 @@
  */
 
 const BASE = "";
+let sessionToken = null;
+
+export function setSessionToken(token) {
+  sessionToken = token;
+}
 
 async function req(path, method = "GET", body = null) {
   const opts = {
     method,
     headers: { "Content-Type": "application/json" },
   };
+  if (sessionToken) opts.headers.Authorization = `Bearer ${sessionToken}`;
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`${BASE}${path}`, opts);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || `HTTP ${res.status}`);
   }
+  if (res.status === 204) return null;
   return res.json();
 }
 
 export const API = {
+  createSession: () => req("/api/sessions", "POST"),
+
   // Health
   health: () => req("/api/health"),
 
@@ -39,6 +48,9 @@ export const API = {
   executeCode: (code, problemId, sessionId = "default") =>
     req("/api/execute-code", "POST", { code, problem_id: problemId, session_id: sessionId }),
 
+  recordActivity: (sessionId = "default") =>
+    req("/api/activity", "POST", { session_id: sessionId }),
+
   // Hints
   getHint: (sessionId = "default") =>
     req("/api/get-hint", "POST", { session_id: sessionId }),
@@ -52,5 +64,9 @@ export const API = {
     req(`/api/session-stats?session_id=${sessionId}`),
 
   // Analytics (all-time)
-  getAnalytics: () => req("/api/analytics"),
+  getAnalytics: (sessionId) =>
+    req(`/api/analytics?session_id=${encodeURIComponent(sessionId)}`),
+
+  deleteSessionData: (sessionId) =>
+    req(`/api/session-data?session_id=${encodeURIComponent(sessionId)}`, "DELETE"),
 };

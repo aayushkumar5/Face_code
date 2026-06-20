@@ -1,5 +1,5 @@
 {
-  "model_path": "models/emotion_cnn.keras",
+  "model_path": "model/emotion_cnn.keras",
   "epochs_trained": 65,
   "best_val_accuracy": 0.5883254408836365,
   "final_val_accuracy": 0.5809417963027954,

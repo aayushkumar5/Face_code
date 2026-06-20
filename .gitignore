@@ -7,10 +7,17 @@ Quiries.txt
 node_modules/
 Frontend/node_modules/
 .env
+.env.*
+!.env.example
 *.db
 .idea/
 test
 train
+/data/
+coverage.xml
+.coverage
+.pytest_cache/
+Frontend/dist/
 fer2013.csv
 test.mp4
 train.mp4

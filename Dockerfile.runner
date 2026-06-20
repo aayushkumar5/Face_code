@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+RUN groupadd --system runner \
+    && useradd --system --gid runner --home /runner runner \
+    && python -m pip install --upgrade pip \
+    && python -m pip install "fastapi>=0.100,<1" "uvicorn>=0.20,<1" "pydantic>=2,<3"
+
+WORKDIR /runner
+COPY runner_service.py ./
+COPY backend/__init__.py ./backend/__init__.py
+COPY backend/engines/__init__.py backend/engines/code_executor.py ./backend/engines/
+RUN chown -R runner:runner /runner
+
+USER runner
+EXPOSE 8080
+CMD ["uvicorn", "runner_service:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--no-access-log"]

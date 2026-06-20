@@ -1,18 +1,12 @@
 # API & Server
-fastapi>=0.100.0
-uvicorn>=0.20.0
-pydantic>=2.0.0
-python-multipart
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+pydantic==2.13.4
 
 # Machine Learning & CV
 numpy==1.24.3
-opencv-python>=4.8.0
-tensorflow==2.13.0
-deepface==0.0.79
-pandas>=2.0.0
-Pillow>=10.0.0
+opencv-python-headless==4.10.0.84
+tensorflow==2.15.0
 
-# Database & Utils
-sqlite3
-requests
-python-dotenv
+# Internal runner client
+httpx==0.28.1

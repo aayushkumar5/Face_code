@@ -1,0 +1,73 @@
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    environment:
+      FACECODE_ENV: production
+      FACECODE_SECRET_KEY: ${FACECODE_SECRET_KEY:?set FACECODE_SECRET_KEY}
+      FACECODE_RUNNER_SECRET: ${FACECODE_RUNNER_SECRET:?set FACECODE_RUNNER_SECRET}
+      FACECODE_RUNNER_URL: http://runner:8080
+      FACECODE_DATA_DIR: /data
+      FACECODE_CORS_ORIGINS: ${FACECODE_CORS_ORIGINS:-http://localhost:8080}
+      FACECODE_TRUSTED_HOSTS: ${FACECODE_TRUSTED_HOSTS:-localhost,127.0.0.1}
+      FACECODE_RETENTION_DAYS: ${FACECODE_RETENTION_DAYS:-30}
+      HOME: /tmp
+    volumes:
+      - facecode_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    depends_on:
+      runner:
+        condition: service_healthy
+    networks:
+      - default
+      - runner_net
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    restart: unless-stopped
+    environment:
+      FACECODE_RUNNER_SECRET: ${FACECODE_RUNNER_SECRET:?set FACECODE_RUNNER_SECRET}
+      FACECODE_RUNNER_CONCURRENCY: 2
+      FACECODE_RUNNER_TIMEOUT: 5
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 1.0
+    networks:
+      - runner_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  default:
+  runner_net:
+    internal: true
+
+volumes:
+  facecode_data:

@@ -411,7 +411,7 @@ Function signature:
                 TestCase([[2, 7, 11, 15], 9], [0, 1]),
                 TestCase([[3, 2, 4], 6], [1, 2]),
                 TestCase([[3, 3], 6], [0, 1]),
-                TestCase([[1, 5, 3, 7], 10], [1, 3]),
+                TestCase([[1, 5, 3, 7], 10], [2, 3]),
             ],
             starter_code="def two_sum(nums: list, target: int) -> list:\n    pass",
             solution="def two_sum(nums: list, target: int) -> list:\n    seen = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return [seen[complement], i]\n        seen[num] = i\n    return []"

@@ -3,7 +3,7 @@ import { API } from "../api";
 
 // Use relative URL so it goes through Vite's proxy (port 3000 → 8000)
 // This avoids Windows IPv4/IPv6 mismatch on localhost and bypasses CORS on WebSocket
-const WS_URL = `ws://${window.location.host}/ws/emotion-stream`;
+const WS_PROTOCOL = window.location.protocol === "https:" ? "wss:" : "ws:";
 const WS_MAX_RETRIES = 5;
 const WS_RETRY_DELAY_MS = 2000; // 2s between retries
 const FRAME_INTERVAL_MS = 1500;
@@ -97,7 +97,7 @@ function TestResults({ results }) {
 }
 
 // ── Main CodingLab ─────────────────────────────────────────────────────────
-export default function CodingLab({ sessionId, onGoAnalytics }) {
+export default function CodingLab({ sessionId, sessionToken, onGoAnalytics }) {
   const [problem, setProblem] = useState(null);
   const [code, setCode] = useState("");
   const [running, setRunning] = useState(false);
@@ -120,6 +120,16 @@ export default function CodingLab({ sessionId, onGoAnalytics }) {
   const streamRef = useRef(null);
   const captureRef = useRef(null);
   const wsRef = useRef(null);
+  const lastActivitySent = useRef(0);
+
+  function updateCode(nextCode) {
+    setCode(nextCode);
+    const now = Date.now();
+    if (now - lastActivitySent.current >= 1000) {
+      lastActivitySent.current = now;
+      API.recordActivity(sessionId).catch(() => {});
+    }
+  }
 
   // ── Load first problem ────────────────────────────────────────────────────
   useEffect(() => {
@@ -177,7 +187,8 @@ export default function CodingLab({ sessionId, onGoAnalytics }) {
     // Don't open a second connection if one is already live
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(WS_URL);
+    const wsUrl = `${WS_PROTOCOL}//${window.location.host}/ws/emotion-stream?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(sessionToken)}`;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -386,7 +397,7 @@ export default function CodingLab({ sessionId, onGoAnalytics }) {
                 </button>
               </div>
             </div>
-            <CodeEditor value={code} onChange={setCode} />
+            <CodeEditor value={code} onChange={updateCode} />
           </div>
 
           {/* Results */}

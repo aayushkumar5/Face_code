@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Offline model training and notebook analysis
+pandas>=2.0.0,<3.0
+Pillow>=10.0.0,<11.0

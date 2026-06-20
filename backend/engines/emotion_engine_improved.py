@@ -7,7 +7,6 @@ Drop-in replacement for emotion_engine_improved.py
 import cv2
 import numpy as np
 from collections import deque
-import time
 import os
 from typing import Dict, Optional, Tuple
 
@@ -15,13 +14,19 @@ from typing import Dict, Optional, Tuple
 EMOTION_LABELS = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
 
 try:
-    from emotion_cnn_model import EmotionCNNInference
+    try:
+        from .emotion_cnn_model import EmotionCNNInference
+    except ImportError:
+        from emotion_cnn_model import EmotionCNNInference
     _CNN_MODULE_AVAILABLE = True
 except ImportError:
     _CNN_MODULE_AVAILABLE = False
 
 try:
-    from confidence_fusion_engine import ConfidenceFusionEngine, SignalExtractor
+    try:
+        from .confidence_fusion_engine import ConfidenceFusionEngine, SignalExtractor
+    except ImportError:
+        from confidence_fusion_engine import ConfidenceFusionEngine, SignalExtractor
     _FUSION_MODULE_AVAILABLE = True
 except ImportError:
     _FUSION_MODULE_AVAILABLE = False
@@ -89,8 +94,7 @@ class EmotionEngine:
                 print("⚠️  No CNN model and DeepFace unavailable – using dummy mode")
 
         # ── Throttling ─────────────────────────────────────
-        self.last_analysis_time = 0
-        self.analysis_interval  = 0.8 if self.backend == "cnn" else 1.2
+        self.analysis_interval = 0.0
 
     # ──────────────────────────────────────────────────────
     # FACE DETECTION
@@ -116,10 +120,6 @@ class EmotionEngine:
     # ──────────────────────────────────────────────────────
 
     def analyze_emotion(self, face_bgr: np.ndarray) -> Optional[Dict]:
-        now = time.time()
-        if now - self.last_analysis_time < self.analysis_interval:
-            return None
-
         result = None
 
         if self.backend == "cnn" and self._cnn:
@@ -168,8 +168,6 @@ class EmotionEngine:
                 "emotion": {e: round(random.random() * 100, 1) for e in EMOTION_LABELS}
             }
 
-        if result:
-            self.last_analysis_time = now
         return result
 
     # ──────────────────────────────────────────────────────
@@ -198,7 +196,7 @@ class EmotionEngine:
     # MAIN: process_frame
     # ──────────────────────────────────────────────────────
 
-    def process_frame(self, frame: np.ndarray) -> Dict:
+    def process_frame(self, frame: np.ndarray, use_smoothing: bool = True) -> Dict:
         """
         Process a single webcam frame.
 
@@ -228,8 +226,9 @@ class EmotionEngine:
         analysis = self.analyze_emotion(face_region)
         if analysis:
             dominant = analysis["dominant_emotion"]
-            self.emotion_buffer.append(dominant)
-            smoothed   = self.get_smoothed_emotion()
+            if use_smoothing:
+                self.emotion_buffer.append(dominant)
+            smoothed = self.get_smoothed_emotion() if use_smoothing else dominant
             confidence = self.emotion_to_confidence(smoothed)
 
             result["emotion"]            = smoothed
@@ -337,6 +336,18 @@ class ConfidenceCalculator:
             )
         self._history.append(score)
         return float(score)
+
+    def record_activity(self):
+        if self._fusion:
+            self._fusion.extractor.record_keystroke()
+
+    def record_run(self, passed: bool):
+        if self._fusion:
+            self._fusion.extractor.record_run(passed)
+
+    def reset_problem(self):
+        if self._fusion:
+            self._fusion.extractor.reset_behavior()
 
     def get_average_confidence(self, n: int = 10) -> float:
         if not self._history:

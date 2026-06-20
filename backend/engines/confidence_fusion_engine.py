@@ -220,17 +220,20 @@ class FusionMLP:
     # ── Forward pass (numpy only) ──────────────────────────
 
     def predict(self, x: np.ndarray) -> float:
-        if self.weights is None:
+        if self.weights is None or self.biases is None:
             return -1.0  # signal not loaded
         h = x.copy()
         for W, b in zip(self.weights[:-1], self.biases[:-1]):
             h = np.maximum(0, h @ W + b)     # ReLU
-        out = h @ self.weights[-1] + self.biases[-1]
-        return float(np.clip(out[0], 0.0, 1.0))   # sigmoid-like clamp
+        logits = h @ self.weights[-1] + self.biases[-1]
+        probability = 1.0 / (1.0 + np.exp(-np.clip(logits[0], -30, 30)))
+        return float(probability)
 
     # ── Save / Load ────────────────────────────────────────
 
     def save(self, path: str = "models/fusion_mlp.npz"):
+        if self.weights is None or self.biases is None:
+            raise RuntimeError("Cannot save an uninitialized fusion model")
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         data = {}
         for i, (W, b) in enumerate(zip(self.weights, self.biases)):
@@ -242,10 +245,22 @@ class FusionMLP:
     def load(self, path: str = "models/fusion_mlp.npz") -> bool:
         if not os.path.exists(path):
             return False
-        data = np.load(path)
-        n_layers = len(self.LAYERS) - 1
-        self.weights = [data[f"W{i}"] for i in range(n_layers)]
-        self.biases  = [data[f"b{i}"] for i in range(n_layers)]
+        try:
+            n_layers = len(self.LAYERS) - 1
+            with np.load(path, allow_pickle=False) as data:
+                weights = [data[f"W{i}"].astype(np.float32) for i in range(n_layers)]
+                biases = [data[f"b{i}"].astype(np.float32) for i in range(n_layers)]
+            expected = list(zip(self.LAYERS, self.LAYERS[1:]))
+            if any(weight.shape != shape for weight, shape in zip(weights, expected)):
+                return False
+            if any(bias.shape != (shape[1],) for bias, shape in zip(biases, expected)):
+                return False
+            self.weights = weights
+            self.biases = biases
+        except (KeyError, OSError, ValueError):
+            self.weights = None
+            self.biases = None
+            return False
         print(f"✅ Fusion MLP loaded from {path}")
         return True
 
@@ -291,23 +306,33 @@ class FusionMLP:
 
                 # Forward
                 activations = [xb]
+                preactivations = []
                 h = xb
                 for W, b in zip(self.weights[:-1], self.biases[:-1]):
-                    h = np.maximum(0, h @ W + b)
+                    z = h @ W + b
+                    preactivations.append(z)
+                    h = np.maximum(0, z)
                     activations.append(h)
-                out = h @ self.weights[-1] + self.biases[-1]
-                pred = np.clip(out, 0.0, 1.0)
+                logits = h @ self.weights[-1] + self.biases[-1]
+                pred = 1.0 / (1.0 + np.exp(-np.clip(logits, -30, 30)))
 
                 # MSE loss
                 diff = pred - yb.reshape(-1, 1)
                 total_loss += np.mean(diff ** 2)
 
-                # Backprop (simplified)
-                grad = 2 * diff / len(xb)
-                dW = activations[-1].T @ grad
-                db = grad.sum(axis=0)
-                self.weights[-1] -= lr * dW
-                self.biases[-1]  -= lr * db
+                delta = 2 * diff * pred * (1 - pred) / len(xb)
+                weight_grads = [None] * len(self.weights)
+                bias_grads = [None] * len(self.biases)
+                for layer in range(len(self.weights) - 1, -1, -1):
+                    weight_grads[layer] = activations[layer].T @ delta
+                    bias_grads[layer] = delta.sum(axis=0)
+                    if layer > 0:
+                        delta = (delta @ self.weights[layer].T) * (
+                            preactivations[layer - 1] > 0
+                        )
+                for layer in range(len(self.weights)):
+                    self.weights[layer] -= lr * weight_grads[layer]
+                    self.biases[layer] -= lr * bias_grads[layer]
 
             if (epoch + 1) % 50 == 0:
                 print(f"  Epoch {epoch+1:3d}/{epochs} | Loss: {total_loss:.4f}")
@@ -318,10 +343,18 @@ class FusionMLP:
         """Load session log or generate synthetic data."""
         if os.path.exists(path):
             samples = []
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 for line in f:
-                    obj = json.loads(line.strip())
-                    samples.append((obj["features"], obj["outcome"]))
+                    if not line.strip():
+                        continue
+                    obj = json.loads(line)
+                    features = obj["features"]
+                    outcome = float(obj["outcome"])
+                    if len(features) != self.LAYERS[0] or not 0 <= outcome <= 1:
+                        raise ValueError("Invalid fusion training sample")
+                    samples.append((features, outcome))
+            if not samples:
+                raise ValueError("Fusion training log contains no samples")
             X = np.array([s[0] for s in samples], dtype=np.float32)
             y = np.array([s[1] for s in samples], dtype=np.float32)
             return X, y
@@ -384,8 +417,8 @@ class ConfidenceFusionEngine:
         recent = list(self._history)[-n:]
         return float(np.mean(recent))
 
-    def get_label(self) -> str:
-        c = self.get_confidence()
+    def get_label(self, confidence: Optional[float] = None) -> str:
+        c = self.get_confidence() if confidence is None else confidence
         if c >= 0.70:  return "High"
         if c >= 0.40:  return "Medium"
         return "Low"
@@ -403,6 +436,7 @@ class ConfidenceFusionEngine:
 
     def get_debug_info(self) -> Dict:
         feats = self.extractor.extract()
+        current_confidence = self.get_confidence()
         return {
             "dominant_emotion_base_conf": round(float(feats[15]), 3),
             "emotion_entropy":            round(float(feats[14]), 3),
@@ -412,8 +446,8 @@ class ConfidenceFusionEngine:
             "inactivity_norm":            round(float(feats[19]), 3),
             "time_on_problem_norm":       round(float(feats[20]), 3),
             "ml_model_active":            self._use_ml,
-            "current_confidence":         round(self.get_confidence(), 3),
-            "label":                      self.get_label(),
+            "current_confidence":         round(current_confidence, 3),
+            "label":                      self.get_label(current_confidence),
         }
 
 

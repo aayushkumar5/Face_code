@@ -53,7 +53,7 @@ export default function Analytics({ sessionId, onBack }) {
       setLoading(true);
       try {
         const [s, sess] = await Promise.all([
-          API.getAnalytics(),
+          API.getAnalytics(sessionId),
           API.getSessionStats(sessionId),
         ]);
         setStats(s);
