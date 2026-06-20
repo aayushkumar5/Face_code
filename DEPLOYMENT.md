@@ -22,6 +22,14 @@ FaceCode ships with a small single-host production topology:
 Do not publish the backend or runner ports. Only the frontend service should
 be reachable from outside the Docker network.
 
+## Render Demo
+
+`render.yaml` defines a three-service free-tier demo deployment. Create a new
+Render Blueprint from this repository and Render will provision the frontend,
+backend, runner, and shared runner secret. Free services can sleep when idle,
+and the SQLite database uses ephemeral storage, so this option is for demos
+only. Use the Docker Compose topology with persistent storage for production.
+
 ## Operations
 
 - Back up the `facecode_data` Docker volume regularly and test restoration.
