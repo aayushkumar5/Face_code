@@ -27,7 +27,7 @@ services:
       - key: FACECODE_SECRET_KEY
         generateValue: true
       - key: FACECODE_RUNNER_URL
-        value: http://facecode-runner:8080
+        value: https://facecode-runner.onrender.com
       - key: FACECODE_DATA_DIR
         value: /tmp/facecode-data
       - key: FACECODE_TRUSTED_HOSTS
@@ -44,7 +44,7 @@ services:
     healthCheckPath: /healthz
     envVars:
       - key: BACKEND_URL
-        value: http://facecode-backend:8000
+        value: https://facecode-backend.onrender.com
 
 envVarGroups:
   - name: facecode-runner-secrets
